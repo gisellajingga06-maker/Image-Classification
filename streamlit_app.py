@@ -3,10 +3,10 @@ import tensorflow as tf
 from PIL import Image
 import tempfile
 
-st.title("Klasifikasi CNN")
+st.title("Klasifikasi Gambar")
 
 model_file = st.file_uploader(
-    "Upload Model CNN (.keras)",
+    "Upload Model Gambar (.keras)",
     type=["keras"]
 )
 
