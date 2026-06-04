@@ -1,47 +1,33 @@
 import streamlit as st
 import tensorflow as tf
-import numpy as np
-from tensorflow.keras.preprocessing import image
 from PIL import Image
-import os
+import tempfile
 
-st.set_page_config(page_title="Klasifikasi Hewan", page_icon="🐾")
+st.title("Klasifikasi CNN")
 
-st.title("🐾 Klasifikasi Gambar Hewan")
-st.write("Upload gambar untuk memprediksi apakah gambar termasuk kelinci atau lumba-lumba.")
+model_file = st.file_uploader(
+    "Upload Model CNN (.keras)",
+    type=["keras"]
+)
 
-MODEL_PATH = "model_hewan.keras"
-class_names = ["kelinci", "lumba2"]
-
-@st.cache_resource
-def load_model():
-    return tf.keras.models.load_model(MODEL_PATH)
-
-try:
-    model = load_model()
-except Exception as e:
-    st.error(f"Gagal memuat model: {e}")
-    st.stop()
-
-uploaded_file = st.file_uploader(
-    "Pilih gambar",
+image_file = st.file_uploader(
+    "Upload Gambar",
     type=["jpg", "jpeg", "png"]
 )
 
-if uploaded_file is not None:
-    img = Image.open(uploaded_file).convert("RGB")
+if model_file is not None:
 
-    st.image(img, caption="Gambar yang diunggah", use_container_width=True)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".keras") as tmp:
+        tmp.write(model_file.read())
+        model_path = tmp.name
 
-    img_resized = img.resize((227, 227))
-    img_array = image.img_to_array(img_resized)
-    img_array = np.expand_dims(img_array, axis=0)
+    model = tf.keras.models.load_model(model_path)
 
-    hasil = model.predict(img_array, verbose=0)
-    prediksi = np.argmax(hasil)
+    st.success("Model berhasil dimuat")
 
-    st.subheader("Hasil Prediksi")
-    st.success(f"{class_names[prediksi]}")
+    if image_file is not None:
+        img = Image.open(image_file)
 
-    st.subheader("Probabilitas")
-    st.write(hasil)
+        st.image(img, use_container_width=True)
+
+        st.write("Siap untuk prediksi")
