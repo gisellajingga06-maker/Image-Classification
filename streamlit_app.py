@@ -4,70 +4,108 @@ from PIL import Image
 import numpy as np
 import tempfile
 
-st.title("Klasifikasi CNN")
+# Judul aplikasi
+st.title("Klasifikasi Hewan: Kelinci atau Lumba-Lumba")
 
+# Upload model
 model_file = st.file_uploader(
     "Upload Model CNN (.keras)",
     type=["keras"]
 )
 
+# Upload gambar
 image_file = st.file_uploader(
-    "Upload Gambar",
+    "Upload Gambar Hewan",
     type=["jpg", "jpeg", "png"]
 )
 
-# Ganti sesuai jumlah kelas model Anda
+# Nama kelas sesuai urutan saat training model
 class_names = [
-    "Kelas 1",
-    "Kelas 2",
-    "Kelas 3"
+    "Kelinci",
+    "Lumba-Lumba"
 ]
 
 if model_file is not None:
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".keras") as tmp:
-        tmp.write(model_file.read())
-        model_path = tmp.name
+    try:
+        # Simpan model sementara
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".keras") as tmp:
+            tmp.write(model_file.read())
+            model_path = tmp.name
 
-    model = tf.keras.models.load_model(model_path)
+        # Load model
+        model = tf.keras.models.load_model(model_path)
 
-    st.success("Model berhasil dimuat")
+        st.success("Model berhasil dimuat")
 
-    if image_file is not None:
+        if image_file is not None:
 
-        img = Image.open(image_file).convert("RGB")
+            # Buka gambar
+            img = Image.open(image_file).convert("RGB")
 
-        st.image(img, caption="Gambar Input", use_container_width=True)
-
-        # Ukuran input model
-        img_resize = img.resize((224, 224))
-
-        # Konversi ke array
-        img_array = np.array(img_resize)
-
-        # Normalisasi
-        img_array = img_array / 255.0
-
-        # Tambah dimensi batch
-        img_array = np.expand_dims(img_array, axis=0)
-
-        # Prediksi
-        prediction = model.predict(img_array)
-
-        predicted_class = np.argmax(prediction)
-        confidence = np.max(prediction) * 100
-
-        st.subheader("Hasil Klasifikasi")
-        st.write(
-            f"Prediksi: **{class_names[predicted_class]}**"
-        )
-        st.write(
-            f"Tingkat Keyakinan: **{confidence:.2f}%**"
-        )
-
-        st.subheader("Probabilitas Tiap Kelas")
-
-        for i, label in enumerate(class_names):
-            st.write(
-                f"{label}: {prediction[0][i]*100:.2f}%"
+            # Tampilkan gambar asli
+            st.image(
+                img,
+                caption="Gambar yang Diunggah",
+                use_container_width=True
             )
+
+            # Ambil ukuran input model
+            input_shape = model.input_shape
+
+            # Biasanya (None, 224, 224, 3)
+            img_height = input_shape[1]
+            img_width = input_shape[2]
+
+            # Resize sesuai ukuran model
+            img_resize = img.resize((img_width, img_height))
+
+            # Konversi ke array
+            img_array = np.array(img_resize)
+
+            # Normalisasi
+            img_array = img_array.astype("float32") / 255.0
+
+            # Tambah dimensi batch
+            img_array = np.expand_dims(img_array, axis=0)
+
+            # Prediksi
+            prediction = model.predict(img_array)
+
+            # Ambil kelas dengan probabilitas tertinggi
+            predicted_index = np.argmax(prediction)
+
+            predicted_class = class_names[predicted_index]
+
+            confidence = float(np.max(prediction)) * 100
+
+            # Tampilkan hasil
+            st.subheader("Hasil Klasifikasi")
+
+            st.success(
+                f"Hewan Terdeteksi: {predicted_class}"
+            )
+
+            st.write(
+                f"Tingkat Keyakinan: {confidence:.2f}%"
+            )
+
+            # Tampilkan seluruh probabilitas
+            st.subheader("Probabilitas Setiap Kelas")
+
+            for i, class_name in enumerate(class_names):
+                prob = float(prediction[0][i]) * 100
+
+                st.write(
+                    f"{class_name}: {prob:.2f}%"
+                )
+
+                st.progress(
+                    min(int(prob), 100)
+                )
+
+    except Exception as e:
+        st.error(f"Terjadi kesalahan: {e}")
+
+else:
+    st.info("Silakan upload model .keras terlebih dahulu")
